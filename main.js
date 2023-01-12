@@ -125,34 +125,42 @@ const app = http.createServer((req, res) => {
                 throw error1;
             }
 
-            db.query("SELECT * FROM topic where id=?", [queryData.id], (error2, result2) => {
+            db.query("SELECT * FROM topic WHERE id=?", [queryData.id], (error2, result2) => {
                 if (error2) {
                     throw error2;
                 }
 
-                let id = result2[0].id;
-                let title = result2[0].title;
-                let description = result2[0].description;
-                let body = `
-                    <h2>${title}</h2>
-                    <article>
-                        <form action="/update_process" method="post">
-                            <input type="hidden" name="id" value="${id}"></input>
-                            <p><input type="text" name="title" value="${title}"></input></p>
-                            <p><textarea name="description" placeholder="description">${description}</textarea></p>
-                            <p><input type="submit" value="update"></input></p>
-                        </form>
-                    </article>
-                `;
-                let list = template.list(result1);
-                let control = `
-                    <a href="/update?id=${id}">Update</a>
-                `;
+                db.query("SELECT * FROM author", (error3, result3) => {
+                    if (error3) {
+                        throw error3;
+                    }
 
-                let html = template.html(title, list, control, body);
-    
-                res.writeHead(200);
-                res.end(html);
+                    let id = result2[0].id;
+                    let title = result2[0].title;
+                    let description = result2[0].description;
+                    let current_author_id = result2[0].author_id;
+                    let body = `
+                        <h2>${title}</h2>
+                        <article>
+                            <form action="/update_process" method="post">
+                                <input type="hidden" name="id" value="${id}"></input>
+                                <p><input type="text" name="title" value="${title}"></input></p>
+                                <p><textarea name="description" placeholder="description">${description}</textarea></p>
+                                <p>${template.authorSelect(result3, current_author_id)}</p>
+                                <p><input type="submit" value="update"></input></p>
+                            </form>
+                        </article>
+                    `;
+                    let list = template.list(result1);
+                    let control = `
+                        <a href="/update?id=${id}">Update</a>
+                    `;
+
+                    let html = template.html(title, list, control, body);
+        
+                    res.writeHead(200);
+                    res.end(html);
+                });
             });
         });
     } else if (pathName === "/update_process") {
@@ -167,9 +175,14 @@ const app = http.createServer((req, res) => {
             let post = new URLSearchParams(body);
             let title = post.get("title");
             let description = post.get("description");
+            let author = post.get("author");
             let id = post.get("id");
 
-            db.query("UPDATE topic SET title=? description=? author_id=1 WHERE id=?", [title, description, id], (error, result) => {
+            db.query("UPDATE topic SET title=?, description=?, author_id=? WHERE id=?", [title, description, author, id], (error, result) => {
+                if (error) {
+                    throw error;
+                }
+
                 res.writeHead(302, {
                     Location: `/?id=${id}`
                 });
